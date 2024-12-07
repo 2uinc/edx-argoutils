@@ -1,9 +1,10 @@
 """
-Utility methods and tasks for working with Snowflake from a Prefect flow.
+Utility methods and tasks for working with Snowflake from a Argo flow.
 """
 import json
 import os
 from collections import namedtuple
+import logging
 from typing import List, TypedDict
 from urllib.parse import urlparse
 
@@ -12,14 +13,15 @@ import snowflake.connector
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from prefect import task
-from prefect.engine import signals
-from prefect.tasks.aws import s3
-from prefect.utilities.logging import get_logger
 
-from edx_prefectutils import s3 as s3_utils
+from edx_argoutils import s3 as s3_utils
 
 MANIFEST_FILE_NAME = 'manifest.json'
 EXPORT_MAX_FILESIZE = 104857600
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
 
 
 class SFCredentials(TypedDict, total=False):
@@ -224,7 +226,6 @@ def load_ga_data_to_snowflake(
         sf_connection.close()
 
 
-@task
 def load_s3_data_to_snowflake(
     date: str,
     date_property: str,
@@ -282,9 +283,9 @@ def load_s3_data_to_snowflake(
       disable_existence_check (bool, optional): Whether to disable check for existing data, useful when
               always appending to the table regardless of any existing data for that provided `date`
     """
-    logger = get_logger()
+    logger = logging.getLogger("Snowflake Utility")
     if not file and not pattern:
-        raise signals.FAIL('Either `file` or `pattern` must be specified to run this task.')
+        raise ValueError("Either `file` or `pattern` must be specified to run this task.")
 
     sf_connection = create_snowflake_connection(sf_credentials, sf_role, warehouse=sf_warehouse)
 
@@ -320,7 +321,8 @@ def load_s3_data_to_snowflake(
                 raise
 
     if row and not overwrite:
-        raise signals.SKIP('Skipping task as data for the date exists and no overwrite was provided.')
+        logger.info("Skipping task as data for the date exists and no overwrite was provided.")
+        return
     else:
         logger.info("Continuing with S3 load for {}".format(date))
 
@@ -374,7 +376,9 @@ def load_s3_data_to_snowflake(
 
         if file:
             logger.info("Loading file {}".format(file))
-            files_paramater = "FILES = ( '{}' )".format(file)
+            files = file.split(',')
+            # files_paramater = "FILES = ( '{}' )".format(file)
+            files_paramater = "FILES = ({})".format(", ".join(["'{}'".format(f) for f in files]))
 
         if pattern:
             logger.info("Loading pattern {}".format(pattern))
@@ -415,7 +419,6 @@ def load_s3_data_to_snowflake(
         sf_connection.close()
 
 
-@task
 def export_snowflake_table_to_s3(
     sf_credentials: SFCredentials,
     sf_database: str,
@@ -433,6 +436,7 @@ def export_snowflake_table_to_s3(
     overwrite: bool = True,
     single: bool = False,
     generate_manifest: bool = False,
+    aws_credentials: dict = None,
 ):
 
     """
@@ -465,7 +469,7 @@ def export_snowflake_table_to_s3(
               copy option.
       generate_manifest (bool, optional): Whether to generate a manifest file in S3. Defaults to `FALSE`.
     """
-    logger = get_logger()
+    logger = logging.getLogger("Export Snowflake Table to S3 Utility")
 
     sf_connection = create_snowflake_connection(
         credentials=sf_credentials,
@@ -484,7 +488,7 @@ def export_snowflake_table_to_s3(
     if overwrite:
         logger.info("Deleting existing data in S3 bucket: {bucket} with prefix: {prefix}".format(
             bucket=export_bucket, prefix=export_prefix))
-        s3_utils.delete_s3_directory.run(export_bucket, export_prefix)
+        s3_utils.delete_s3_directory(export_bucket, export_prefix, aws_credentials)
 
     escape_clause = '' if escape_unenclosed_field is None \
         else "ESCAPE_UNENCLOSED_FIELD = NONE" if escape_unenclosed_field == 'NONE' \
@@ -552,14 +556,16 @@ def export_snowflake_table_to_s3(
                     "urls": s3_file_paths,
                 }
             )
-            s3.S3Upload(bucket=export_bucket).run(
-                json.dumps(manifest_file_content),
-                key=s3_manifest_file_prefix
+            s3_client = s3_utils.get_s3_client(aws_credentials)
+            s3_client.put_object(
+                Bucket=export_bucket,
+                Key=s3_manifest_file_prefix,
+                Body=json.dumps(manifest_file_content)
             )
     except snowflake.connector.ProgrammingError as e:
         if 'Files already existing at the unload destination' in e.msg:
             logger.error("Files already exist at {destination}".format(destination=export_path))
-            raise signals.FAIL('Files already exist. Use overwrite option to force unloading.')
+            raise Exception('Files already exist. Use overwrite option to force unloading.')
         else:
             raise
     finally:
