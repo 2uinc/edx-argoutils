@@ -1,5 +1,6 @@
 """
 Functions for pulling sitemap data.
+Functions for pulling sitemap data.
 """
 
 import json
@@ -7,7 +8,9 @@ import xml.etree.ElementTree as ET
 from os.path import basename, join, splitext
 from urllib.parse import urlparse
 import boto3
+import boto3
 import requests
+from .common import get_date
 from .common import get_date
 
 
@@ -47,7 +50,7 @@ def write_sitemap_to_s3(sitemap_data: str, s3_bucket: str, s3_path: str, credent
     filename, sitemap_json = sitemap_data
     today = get_date(None)
     date_path = f'{today}/{filename}.json'
-    s3_key = f'{s3_path}/{date_path}'
+    s3_key = f'{s3_path}{date_path}'
     s3_client = boto3.client(
         's3',
         aws_access_key_id=credentials.get('AccessKeyId'),
