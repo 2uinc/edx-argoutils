@@ -7,7 +7,6 @@ Tests for Common utils in the `edx_argoutils`.
 from edx_argoutils import common
 from datetime import datetime, date
 from unittest.mock import patch
-from opaque_keys.edx.keys import CourseKey
 
 def test_generate_dates():
     result = common.generate_dates(
