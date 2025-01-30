@@ -36,16 +36,12 @@ def test_get_unzipped_cartesian_product():
     
 
 def test_valid_course_id():
-    course_id = "course-v1:BerkeleyX+CS198.SDC.1+1T2021"
-    result = "BerkeleyX_CS198.SDC.1_1T2021" 
-    with patch.object(CourseKey, 'from_string') as mock_from_string:
-        mock_from_string.return_value._to_string.return_value = result
-        assert result == common.get_filename_safe_course_id(course_id)
+    result = common.get_filename_safe_course_id("course-v1:BerkeleyX+CS198.SDC.1+1T2021")
+    assert result == "BerkeleyX_CS198.SDC.1_1T2021"
 
 def test_invalid_course_id():
-    course_id = "BerkeleyX!CS198.SDC.1!1T2021"
-    result = "BerkeleyX_CS198.SDC.1_1T2021"
-    assert result == common.get_filename_safe_course_id(course_id) 
+    result = common.get_filename_safe_course_id("BerkeleyX!CS198.SDC.1!1T2021")
+    assert result == "BerkeleyX_CS198.SDC.1_1T2021"
 
 def test_generate_date_range():
     # Test Case 1: Custom date range (is_daily=False)
