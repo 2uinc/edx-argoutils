@@ -33,7 +33,7 @@ def test_get_unzipped_cartesian_product():
         (1, 1, 1, 2, 2, 2, 3, 3, 3),
         ("a", "b", "c", "a", "b", "c", "a", "b", "c")
     ]
-    
+
 
 def test_valid_course_id():
     result = common.get_filename_safe_course_id("course-v1:BerkeleyX+CS198.SDC.1+1T2021")

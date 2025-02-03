@@ -101,7 +101,7 @@ def get_filename_safe_course_id(course_id, replacement_char='_'):
     return re.sub(r'[^\w\.\-]', six.text_type(replacement_char), filename)
 
 
-def generate_date_range(start_date=None, end_date=None, is_daily: bool =None):
+def generate_date_range(start_date=None, end_date=None, is_daily: bool = None):
     """
     Generate a list of dates depending on parameters passed. Dates are inclusive.
         Custom dates is top priority: start_date & end_date are set, is_daily = False
