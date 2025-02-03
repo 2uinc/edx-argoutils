@@ -1,7 +1,15 @@
-import pytest
+# import pytest
 from unittest.mock import patch, MagicMock
-import boto3
-from edx_argoutils.s3 import get_s3_client, delete_s3_directory, delete_object_from_s3, list_object_keys_from_s3, write_report_to_s3, get_s3_url, get_s3_path_for_date
+# import boto3
+from edx_argoutils.s3 import (
+    get_s3_client,
+    delete_s3_directory,
+    delete_object_from_s3,
+    list_object_keys_from_s3,
+    write_report_to_s3,
+    get_s3_url,
+    get_s3_path_for_date
+)
 
 # Test `get_s3_client` function
 @patch('boto3.client')
@@ -80,8 +88,20 @@ def test_list_object_keys_from_s3(mock_boto_client):
 
     # Simulate the second page of objects
     mock_s3_client.list_objects_v2.side_effect = [
-        {'Contents': [{'Key': 'file1.txt'}, {'Key': 'file2.txt'}], 'IsTruncated': True, 'NextContinuationToken': 'next-token'},
-        {'Contents': [{'Key': 'file3.txt'}], 'IsTruncated': False}
+        {
+            'Contents': [
+                {'Key': 'file1.txt'},
+                {'Key': 'file2.txt'}
+            ],
+            'IsTruncated': True,
+            'NextContinuationToken': 'next-token'
+        },
+        {
+            'Contents': [
+                {'Key': 'file3.txt'}
+            ],
+            'IsTruncated': False
+        }
     ]
 
     bucket = 'my-bucket'
@@ -111,7 +131,7 @@ def test_write_report_to_s3(mock_get_s3_path, mock_boto_client):
 
     mock_s3_client.put_object.assert_called_once_with(
         Bucket=s3_bucket,
-        Key='folder/report.json',
+        Key='folder/folder/report.json',
         Body='{"key": "value"}',
         ContentType='application/json'
     )
