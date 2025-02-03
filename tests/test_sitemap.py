@@ -52,7 +52,7 @@ class TestSitemapTasks(unittest.TestCase):
         mockresponse = Mock()
         mockget.return_value = mockresponse
         mockresponse.text = """<?xml version="1.0" encoding="UTF-8"?>
-        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" 
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
                 xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
             <url>
                 <loc>https://www.foo.come/terms-service</loc>
@@ -97,9 +97,9 @@ class TestSitemapTasks(unittest.TestCase):
         today = mock_get_date.return_value
 
         result = write_sitemap_to_s3(
-            sitemap_data=('sitemap_content', '{"urlset": []}'), 
-            s3_bucket='test-bucket', 
-            s3_path='dev/sitemaps/', 
+            sitemap_data=('sitemap_content', '{"urlset": []}'),
+            s3_bucket='test-bucket',
+            s3_path='dev/sitemaps/',
             credentials={'AccessKeyId': 'AK123', 'SecretAccessKey': 'SAK', 'SessionToken': '987654321'}
         )
 
