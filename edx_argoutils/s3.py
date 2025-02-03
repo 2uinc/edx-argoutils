@@ -7,6 +7,7 @@ import logging
 
 logger = logging.getLogger("s3")
 
+
 def get_s3_client(credentials: dict = None):
     s3_client = None
     if credentials:
@@ -20,6 +21,7 @@ def get_s3_client(credentials: dict = None):
         s3_client = boto3.client('s3')
 
     return s3_client
+
 
 def delete_s3_directory(bucket: str = None, prefix: str = None, credentials: dict = None):
     """
