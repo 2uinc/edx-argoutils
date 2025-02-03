@@ -31,7 +31,7 @@ def test_get_unzipped_cartesian_product():
     )
     assert result == [
         (1, 1, 1, 2, 2, 2, 3, 3, 3),
-        ("a", "b", "c", "a", "b", "c", "a", "b", "c") 
+        ("a", "b", "c", "a", "b", "c", "a", "b", "c")
     ]
     
 
