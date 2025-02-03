@@ -4,7 +4,7 @@ Functions for pulling sitemap data.
 
 import json
 import xml.etree.ElementTree as ET
-from os.path import basename, join, splitext
+from os.path import basename, splitext
 from urllib.parse import urlparse
 import boto3
 import requests

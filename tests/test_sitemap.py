@@ -16,7 +16,6 @@ SCRAPED_AT = '2025-01-31'
 
 class TestSitemapTasks(unittest.TestCase):
 
-
     @patch.object(requests, 'get')
     def test_fetch_sitemap_urls(self, mockget):
         # Mock the response from requests.get
@@ -41,7 +40,6 @@ class TestSitemapTasks(unittest.TestCase):
 
         # Check if the result matches the expected output
         self.assertEqual(result, expected_output)
-
 
     @patch('edx_argoutils.common.get_date')
     @patch.object(requests, 'get')
@@ -88,7 +86,6 @@ class TestSitemapTasks(unittest.TestCase):
         # Check if the result matches the expected output
         self.assertEqual((sitemap_filename, json.loads(sitemap_json)), ('sitemap-0', expected_output))
 
-
     @patch('edx_argoutils.common.get_date', return_value=datetime.now().strftime('%Y-%m-%d'))  # Mocking expected date
     @patch('boto3.client')  # Mocking the boto3 S3 client
     def test_write_sitemap_to_s3(self, mock_boto_client, mock_get_date):
@@ -106,7 +103,7 @@ class TestSitemapTasks(unittest.TestCase):
             credentials={'AccessKeyId': 'AK123', 'SecretAccessKey': 'SAK', 'SessionToken': '987654321'}
         )
 
-       # Verify the put_object method of the mock S3 client was called with the expected parameters
+        # Verify the put_object method of the mock S3 client was called with the expected parameters
         mock_boto_client.return_value.put_object.assert_called_once_with(
             Bucket='test-bucket',
             Key=f'dev/sitemaps/{today}/sitemap_content.json',
