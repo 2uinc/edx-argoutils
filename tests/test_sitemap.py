@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import Mock, patch
 import requests
 from edx_argoutils.sitemap import fetch_sitemap, fetch_sitemap_urls, write_sitemap_to_s3
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 SCRAPED_AT = '2025-02-06'
