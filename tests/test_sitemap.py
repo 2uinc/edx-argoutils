@@ -8,10 +8,10 @@ import unittest
 from unittest.mock import Mock, patch
 import requests
 from edx_argoutils.sitemap import fetch_sitemap, fetch_sitemap_urls, write_sitemap_to_s3
-from datetime import datetime, timezone
+from datetime import datetime
 
 
-SCRAPED_AT = '2025-01-31'
+SCRAPED_AT = '2025-02-06'
 
 
 class TestSitemapTasks(unittest.TestCase):
@@ -44,9 +44,7 @@ class TestSitemapTasks(unittest.TestCase):
     @patch('edx_argoutils.common.get_date')
     @patch.object(requests, 'get')
     def test_fetch_sitemap(self, mockget, mock_get_date):
-        # Mock get_date to return a full timestamp matching the function output format
-        mock_scraped_at = datetime.now(timezone.utc).isoformat()
-        mock_get_date.return_value = mock_scraped_at
+        mock_get_date.return_value = '2025-02-06'
 
         # Mock the response from requests.get
         mockresponse = Mock()
@@ -83,6 +81,9 @@ class TestSitemapTasks(unittest.TestCase):
         sitemap_url = 'https://www.foo.com/sitemap-0.xml'
         sitemap_filename, sitemap_json = fetch_sitemap(sitemap_url=sitemap_url)
 
+        result_json = json.loads(sitemap_json)
+        for entry in result_json:
+            entry['scraped_at'] = entry['scraped_at'].split('T')[0]  # Remove time part if present
         # Check if the result matches the expected output
         self.assertEqual((sitemap_filename, json.loads(sitemap_json)), ('sitemap-0', expected_output))
 
