@@ -35,7 +35,7 @@ class TestSitemapTasks(unittest.TestCase):
         # Expected output for the mock sitemap index response
         expected_output = ['https://www.foo.com/sitemap-0.xml', 'https://www.foo.com/sitemap-1.xml']
 
-        # Call the function (directly, without Prefect context)
+        # Call the function directly
         result = fetch_sitemap_urls(sitemap_index_url='dummy_url')
 
         # Check if the result matches the expected output
