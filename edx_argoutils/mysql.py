@@ -92,6 +92,9 @@ def load_s3_data_to_mysql(
                 Defaults to `False`.
       use_manifest (bool, optional): Whether to use a manifest file to load data. Defaults to `False`.
     """
+    
+    if not table_columns:
+        raise ValueError("table_columns cannot be empty")
 
     def _drop_temp_tables(table, connection):
         for table in [table + '_old', table + '_temp']:
