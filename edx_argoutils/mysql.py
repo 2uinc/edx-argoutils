@@ -60,6 +60,7 @@ def load_s3_data_to_mysql(
     overwrite: bool = False,
     overwrite_with_temp_table: bool = False,
     use_manifest: bool = False,
+    connection = None,
 ):
 
     """
@@ -91,6 +92,7 @@ def load_s3_data_to_mysql(
               IMPORTANT: Do not use this option for incrementally updated tables as any historical data would be lost.
                 Defaults to `False`.
       use_manifest (bool, optional): Whether to use a manifest file to load data. Defaults to `False`.
+      connection (optional): Optional connection of mysql DB.
     """
     
     if not table_columns:
@@ -103,7 +105,7 @@ def load_s3_data_to_mysql(
 
     logger = logging.getLogger("load_s3_data_to_mysql")
 
-    connection = create_mysql_connection(aurora_credentials, database)
+    connection = connection or create_mysql_connection(aurora_credentials, database)
 
     table_schema = []
 
