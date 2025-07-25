@@ -57,6 +57,29 @@ def test_delete_s3_directory(mock_list_keys, mock_boto_client):
         Delete={'Objects': [{'Key': 'file1.txt'}, {'Key': 'file2.txt'}]}
     )
 
+# Test `delete_s3_directory` function for 1001 keys
+@patch('boto3.client')
+@patch('edx_argoutils.s3.list_object_keys_from_s3')
+def test_delete_s3_directory_batches(mock_list_keys, mock_boto_client):
+    mock_s3_client = MagicMock()
+    mock_boto_client.return_value = mock_s3_client
+    mock_list_keys.return_value = [f'file{i}.txt' for i in range(1001)]
+
+    bucket = 'my-bucket'
+    prefix = 'folder/'
+    credentials = {'AccessKeyId': 'AKIA...', 'SecretAccessKey': 'SECRET...', 'SessionToken': 'SESSION...'}
+
+    delete_s3_directory(bucket, prefix, credentials)
+
+    # Should be called twice: once for 1000 keys, once for the remaining 1 key
+    assert mock_s3_client.delete_objects.call_count == 2
+
+    first_call = mock_s3_client.delete_objects.call_args_list[0]
+    second_call = mock_s3_client.delete_objects.call_args_list[1]
+
+    assert len(first_call[1]['Delete']['Objects']) == 1000
+    assert len(second_call[1]['Delete']['Objects']) == 1
+
 
 # Test `delete_object_from_s3` function
 @patch('boto3.client')

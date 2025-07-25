@@ -25,23 +25,29 @@ def get_s3_client(credentials: dict = None):
 
 def delete_s3_directory(bucket: str = None, prefix: str = None, credentials: dict = None):
     """
-    Deletes all objects with the given S3 directory (prefix) from the given bucket.
+    Deletes all objects under the given prefix from the specified S3 bucket.
+    Handles batching (1000 keys max per call) and filters out empty/invalid keys.
 
     Args:
         bucket (str): The S3 bucket to delete the objects from.
         prefix (str): The S3 prefix to delete the objects from.
         credentials (dict): The AWS credentials to use.
     """
+    s3_client = get_s3_client(credentials)
     s3_keys = list_object_keys_from_s3(bucket, prefix, credentials)
+    logger.info("Deleting S3 keys: {}".format(s3_keys))
     if s3_keys:
-        s3_client = get_s3_client(credentials)
-        logger.info("Deleting S3 keys: {}".format(s3_keys))
-        s3_client.delete_objects(
-            Bucket=bucket,
-            Delete={
-                'Objects': [{'Key': key} for key in s3_keys]
-            }
-        )
+        for i in range(0, len(s3_keys), 1000):
+            batch = s3_keys[i:i + 1000]
+            logger.info("Deleting {} S3 keys from bucket {} (batch {} to {})".format(
+                len(batch), bucket, i + 1, i + len(batch)
+            ))
+            s3_client.delete_objects(
+                Bucket=bucket,
+                Delete={
+                    'Objects': [{'Key': key} for key in batch]
+                }
+            )
 
 
 def delete_object_from_s3(key: str = None, bucket: str = None, credentials: dict = None, ):
