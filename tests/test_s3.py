@@ -71,14 +71,14 @@ def test_delete_s3_directory_batches(mock_list_keys, mock_boto_client):
 
     delete_s3_directory(bucket, prefix, credentials)
 
-    # Should be called twice: once for 1000 keys, once for the remaining 1 key
+    # Should be called twice: once for 900 keys, once for the remaining 1 key
     assert mock_s3_client.delete_objects.call_count == 2
 
     first_call = mock_s3_client.delete_objects.call_args_list[0]
     second_call = mock_s3_client.delete_objects.call_args_list[1]
 
-    assert len(first_call[1]['Delete']['Objects']) == 1000
-    assert len(second_call[1]['Delete']['Objects']) == 1
+    assert len(first_call[1]['Delete']['Objects']) == 900
+    assert len(second_call[1]['Delete']['Objects']) == 101
 
 
 # Test `delete_object_from_s3` function
