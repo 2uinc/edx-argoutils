@@ -9,7 +9,7 @@ import requests
 from ddt import data, ddt, unpack
 from mock import patch
 
-from edx_prefectutils.edx_api_client import EdxApiClient
+from edx_argoutils.edx_api_client import EdxApiClient
 
 FAKE_AUTH_URL = 'http://example.com/oauth2/access_token'
 FAKE_CLIENT_ID = 'aclientid'
@@ -39,7 +39,7 @@ class EdxApiClientTestCase(TestCase):
                 """Return the time specified by the time offset"""
                 return self.current_time + timedelta(seconds=self.time_offset)
 
-        datetime_patcher = patch('edx_prefectutils.edx_api_client.datetime', MockDateTime)
+        datetime_patcher = patch('edx_argoutils.edx_api_client.datetime', MockDateTime)
         datetime_patcher.start()
         self.addCleanup(datetime_patcher.stop)
 
@@ -155,7 +155,7 @@ class EdxApiClientTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {})
 
-        num_auth_token_requests = 1
+        num_auth_token_requests = 2
         num_failed_requests = 2
         num_successful_requests = 1
         total_expected_requests = num_auth_token_requests + num_failed_requests + num_successful_requests
@@ -207,9 +207,9 @@ class EdxApiClientTestCase(TestCase):
                                                    pagination_key=pagination_key))
         self.assertEqual([response.json() for response in responses], response_bodies)
 
-        self.assertEqual(len(httpretty.httpretty.latest_requests), 6)
+        self.assertEqual(len(httpretty.httpretty.latest_requests), 7)
         self.assertEqual(
-            httpretty.httpretty.latest_requests[1].querystring, {'limit': ['2'], 'foo': ['bar']}
+            httpretty.httpretty.latest_requests[2].querystring, {'limit': ['2'], 'foo': ['bar']}
         )
         self.assertEqual(
             httpretty.httpretty.latest_requests[3].querystring, {'limit': ['2'], 'foo': ['bar'], 'offset': ['2']}

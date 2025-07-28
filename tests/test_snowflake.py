@@ -1,20 +1,17 @@
 #!/usr/bin/env python
 
 """
-Tests for Snowflake utils in the `edx_prefectutils` package.
+Tests for Snowflake utils in the `edx_argoutils` package.
 """
 
 import json
 
 import mock
 import pytest
-from prefect.core import Flow
-from prefect.engine import signals
-from prefect.utilities.debug import raise_on_exception
 from pytest_mock import mocker  # noqa: F401
 from snowflake.connector import ProgrammingError
 
-from edx_prefectutils import snowflake
+from edx_argoutils import snowflake
 
 
 def test_qualified_table_name():
@@ -84,21 +81,18 @@ def test_load_json_objects_to_snowflake_no_existing_table(mock_sf_connection):
     mock_fetchone = mock.Mock(side_effect=ProgrammingError("does not exist"))
     mock_cursor.fetchone = mock_fetchone
 
-    with Flow("test") as f:
-        snowflake.load_ga_data_to_snowflake(
-            sf_credentials={},
-            sf_database="test_database",
-            sf_schema="test_schema",
-            sf_table="test_table",
-            sf_role="test_role",
-            sf_warehouse="test_warehouse",
-            sf_storage_integration="test_storage_integration",
-            bq_dataset="test_dataset",
-            gcs_url="gs://test-location",
-            date="2020-01-01",
-        )
-    state = f.run()
-    assert state.is_successful()
+    snowflake.load_ga_data_to_snowflake(
+        sf_credentials={},
+        sf_database="test_database",
+        sf_schema="test_schema",
+        sf_table="test_table",
+        sf_role="test_role",
+        sf_warehouse="test_warehouse",
+        sf_storage_integration="test_storage_integration",
+        bq_dataset="test_dataset",
+        gcs_url="gs://test-location",
+        date="2020-01-01",
+    )
     mock_cursor.execute.assert_has_calls(
         [
             mock.call("\n        SELECT 1 FROM test_database.test_schema.test_table\n        WHERE session:date='2020-01-01'\n            AND ga_view_id='test_dataset'\n        "), # noqa
@@ -115,7 +109,7 @@ def test_load_json_objects_to_snowflake_error_on_table_exist_check(mock_sf_conne
     mock_fetchone = mock.Mock(side_effect=ProgrammingError())
     mock_cursor.fetchone = mock_fetchone
 
-    with Flow("test") as f:
+    with pytest.raises(ProgrammingError):
         snowflake.load_ga_data_to_snowflake(
             sf_credentials={},
             sf_database="test_database",
@@ -128,9 +122,6 @@ def test_load_json_objects_to_snowflake_error_on_table_exist_check(mock_sf_conne
             gcs_url="gs://test-location",
             date="2020-01-01",
         )
-    with raise_on_exception():
-        with pytest.raises(ProgrammingError):
-            f.run()
 
 
 def test_load_json_objects_to_snowflake_overwrite(mock_sf_connection):
@@ -139,22 +130,19 @@ def test_load_json_objects_to_snowflake_overwrite(mock_sf_connection):
     mock_fetchone = mock.Mock(return_value=None)
     mock_cursor.fetchone = mock_fetchone
 
-    with Flow("test") as f:
-        snowflake.load_ga_data_to_snowflake(
-            sf_credentials={},
-            sf_database="test_database",
-            sf_schema="test_schema",
-            sf_table="test_table",
-            sf_role="test_role",
-            sf_warehouse="test_warehouse",
-            sf_storage_integration="test_storage_integration",
-            bq_dataset="test_dataset",
-            gcs_url="gs://test-location",
-            date="2020-01-01",
-            overwrite=True
-        )
-    state = f.run()
-    assert state.is_successful()
+    snowflake.load_ga_data_to_snowflake(
+        sf_credentials={},
+        sf_database="test_database",
+        sf_schema="test_schema",
+        sf_table="test_table",
+        sf_role="test_role",
+        sf_warehouse="test_warehouse",
+        sf_storage_integration="test_storage_integration",
+        bq_dataset="test_dataset",
+        gcs_url="gs://test-location",
+        date="2020-01-01",
+        overwrite=True
+    )
     mock_cursor.execute.assert_has_calls(
         [
             mock.call("\n        SELECT 1 FROM test_database.test_schema.test_table\n        WHERE session:date='2020-01-01'\n            AND ga_view_id='test_dataset'\n        "), # noqa
@@ -172,21 +160,18 @@ def test_load_json_objects_to_snowflake_table_exists_no_overwrite(mock_sf_connec
     mock_fetchone = mock.Mock()
     mock_cursor.fetchone = mock_fetchone
 
-    with Flow("test") as f:
-        snowflake.load_ga_data_to_snowflake(
-            sf_credentials={},
-            sf_database="test_database",
-            sf_schema="test_schema",
-            sf_table="test_table",
-            sf_role="test_role",
-            sf_warehouse="test_warehouse",
-            sf_storage_integration="test_storage_integration",
-            bq_dataset="test_dataset",
-            gcs_url="gs://test-location",
-            date="2020-01-01",
-        )
-    state = f.run()
-    assert state.is_successful()
+    snowflake.load_ga_data_to_snowflake(
+        sf_credentials={},
+        sf_database="test_database",
+        sf_schema="test_schema",
+        sf_table="test_table",
+        sf_role="test_role",
+        sf_warehouse="test_warehouse",
+        sf_storage_integration="test_storage_integration",
+        bq_dataset="test_dataset",
+        gcs_url="gs://test-location",
+        date="2020-01-01",
+    )
     mock_cursor.execute.assert_called_once_with("\n        SELECT 1 FROM test_database.test_schema.test_table\n        WHERE session:date='2020-01-01'\n            AND ga_view_id='test_dataset'\n        ") # noqa
 
 
@@ -195,7 +180,7 @@ def test_load_json_objects_to_snowflake_table_general_exception(mock_sf_connecti
     mock_commit = mock.Mock(side_effect=Exception)
     mock_sf_connection.commit = mock_commit
 
-    with Flow("test") as f:
+    with pytest.raises(Exception):
         snowflake.load_ga_data_to_snowflake(
             sf_credentials={},
             sf_database="test_database",
@@ -209,15 +194,11 @@ def test_load_json_objects_to_snowflake_table_general_exception(mock_sf_connecti
             date="2020-01-01",
             overwrite=True
         )
-    with raise_on_exception():
-        with pytest.raises(Exception):
-            f.run()
 
 
 def test_load_s3_data_to_snowflake_missing_parameters():
-    task = snowflake.load_s3_data_to_snowflake
-    with pytest.raises(signals.FAIL, match="Either `file` or `pattern` must be specified to run this task."):
-        task.run(
+    with pytest.raises(ValueError, match="Either `file` or `pattern` must be specified to run this task."):
+        snowflake.load_s3_data_to_snowflake(
             date="2020-01-01",
             date_property='date',
             sf_credentials={},
@@ -237,8 +218,7 @@ def test_load_s3_data_to_snowflake_no_existing_table(mock_sf_connection):
     mock_fetchone = mock.Mock(side_effect=ProgrammingError("does not exist"))
     mock_cursor.fetchone = mock_fetchone
 
-    task = snowflake.load_s3_data_to_snowflake
-    task.run(
+    snowflake.load_s3_data_to_snowflake(
         date="2020-01-01",
         date_property='date',
         sf_credentials={},
@@ -257,19 +237,18 @@ def test_load_s3_data_to_snowflake_no_existing_table(mock_sf_connection):
             mock.call("\n            SELECT 1 FROM test_database.test_schema.test_table\n            WHERE date(PROPERTIES:date)=date('2020-01-01')\n            "),  # noqa
             mock.call('\n        CREATE TABLE IF NOT EXISTS test_database.test_schema.test_table (\n            ID NUMBER AUTOINCREMENT START 1 INCREMENT 1,\n            LOAD_TIME TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP(),\n            ORIGIN_FILE_NAME VARCHAR(16777216),\n            ORIGIN_FILE_LINE NUMBER(38,0),\n            ORIGIN_STR VARCHAR(16777216),\n            PROPERTIES VARIANT\n        );\n        '),  # noqa
             mock.call("\n        CREATE STAGE IF NOT EXISTS test_database.test_schema.test_table_stage\n            URL = 's3://edx-test/test/'\n            STORAGE_INTEGRATION = test_storage_integration\n            FILE_FORMAT = (TYPE='JSON', STRIP_OUTER_ARRAY=TRUE);\n        "),  # noqa
-            mock.call("\n        COPY INTO test_database.test_schema.test_table (origin_file_name, origin_file_line, origin_str, properties)\n            FROM (\n                SELECT\n                    metadata$filename,\n                    metadata$file_row_number,\n                    t.$1,\n                    CASE\n                        WHEN CHECK_JSON(t.$1) IS NULL THEN t.$1\n                        ELSE NULL\n                    END\n                FROM @test_database.test_schema.test_table_stage t\n            )\n        FILES = ( 'test_file.csv' )\n        PATTERN = '.*'\n        FORCE=False\n        ")  # noqa
+            mock.call("\n        COPY INTO test_database.test_schema.test_table (origin_file_name, origin_file_line, origin_str, properties)\n            FROM (\n                SELECT\n                    metadata$filename,\n                    metadata$file_row_number,\n                    t.$1,\n                    CASE\n                        WHEN CHECK_JSON(t.$1) IS NULL THEN t.$1\n                        ELSE NULL\n                    END\n                FROM @test_database.test_schema.test_table_stage t\n            )\n        FILES = ('test_file.csv')\n        PATTERN = '.*'\n        FORCE=False\n        ")  # noqa
         ]
     )
 
 
-def test_load_s3_data_to_snowflake_data_exists_no_overwrite(mock_sf_connection):
+def test_load_s3_data_to_snowflake_data_exists_no_overwrite(mock_sf_connection, caplog):
     mock_cursor = mock_sf_connection.cursor()
     mock_fetchone = mock.Mock()
     mock_cursor.fetchone = mock_fetchone
 
-    task = snowflake.load_s3_data_to_snowflake
-    with pytest.raises(signals.SKIP, match="Skipping task as data for the date exists and no overwrite was provided."):
-        task.run(
+    with caplog.at_level('INFO'):
+        snowflake.load_s3_data_to_snowflake(
             date="2020-01-01",
             date_property='date',
             sf_credentials={},
@@ -281,7 +260,9 @@ def test_load_s3_data_to_snowflake_data_exists_no_overwrite(mock_sf_connection):
             sf_storage_integration_name="test_storage_integration",
             s3_url="s3://edx-test/test/",
             pattern=".*",
+            overwrite=False
         )
+    assert "Skipping task as data for the date exists and no overwrite was provided." in caplog.text
 
 
 def test_export_snowflake_table_to_s3_with_exception(mock_sf_connection):
@@ -289,9 +270,8 @@ def test_export_snowflake_table_to_s3_with_exception(mock_sf_connection):
     mock_execute = mock.Mock(side_effect=ProgrammingError('Files already existing at the unload destination'))
     mock_cursor.execute = mock_execute
 
-    task = snowflake.export_snowflake_table_to_s3
-    with pytest.raises(signals.FAIL, match="Files already exist. Use overwrite option to force unloading."):
-        task.run(
+    with pytest.raises(Exception, match="Files already exist. Use overwrite option to force unloading."):
+        snowflake.export_snowflake_table_to_s3(
             sf_credentials={},
             sf_database="test_database",
             sf_schema="test_schema",
@@ -306,24 +286,21 @@ def test_export_snowflake_table_to_s3_with_exception(mock_sf_connection):
 
 def test_export_snowflake_table_to_s3_overwrite(mock_sf_connection):  # noqa: F811
     mock_cursor = mock_sf_connection.cursor()
-    with mock.patch('edx_prefectutils.s3.delete_s3_directory.run') as mock_delete_s3_directory:
-        with Flow("test") as f:
-            snowflake.export_snowflake_table_to_s3(
-                sf_credentials={},
-                sf_database="test_database",
-                sf_schema="test_schema",
-                sf_table="test_table",
-                sf_role="test_role",
-                sf_warehouse="test_warehouse",
-                sf_storage_integration="test_storage_integration",
-                s3_path="s3://edx-test/test/",
-                overwrite=True,
-                enclosed_by='NONE',
-                escape_unenclosed_field='\\\\',
-                null_marker='NULL',
-            )
-        state = f.run()
-        assert state.is_successful()
+    with mock.patch('edx_argoutils.s3.delete_s3_directory'):
+        snowflake.export_snowflake_table_to_s3(
+            sf_credentials={},
+            sf_database="test_database",
+            sf_schema="test_schema",
+            sf_table="test_table",
+            sf_role="test_role",
+            sf_warehouse="test_warehouse",
+            sf_storage_integration="test_storage_integration",
+            s3_path="s3://edx-test/test/",
+            overwrite=True,
+            enclosed_by='NONE',
+            escape_unenclosed_field='\\\\',
+            null_marker='NULL',
+        )
 
         mock_cursor.execute.assert_has_calls(
             [
@@ -331,28 +308,23 @@ def test_export_snowflake_table_to_s3_overwrite(mock_sf_connection):  # noqa: F8
             ]
         )
 
-        mock_delete_s3_directory.assert_called_once_with('edx-test', 'test/test_database-test_schema-test_table/')
-
 
 def test_export_snowflake_table_to_s3_no_escape(mock_sf_connection):  # noqa: F811
     mock_cursor = mock_sf_connection.cursor()
-    with mock.patch('edx_prefectutils.s3.delete_s3_directory.run'):
-        with Flow("test") as f:
-            snowflake.export_snowflake_table_to_s3(
-                sf_credentials={},
-                sf_database="test_database",
-                sf_schema="test_schema",
-                sf_table="test_table",
-                sf_role="test_role",
-                sf_warehouse="test_warehouse",
-                sf_storage_integration="test_storage_integration",
-                s3_path="s3://edx-test/test/",
-                overwrite=True,
-                enclosed_by='NONE',
-                null_marker='NULL',
-            )
-        state = f.run()
-        assert state.is_successful()
+    with mock.patch('edx_argoutils.s3.delete_s3_directory'):
+        snowflake.export_snowflake_table_to_s3(
+            sf_credentials={},
+            sf_database="test_database",
+            sf_schema="test_schema",
+            sf_table="test_table",
+            sf_role="test_role",
+            sf_warehouse="test_warehouse",
+            sf_storage_integration="test_storage_integration",
+            s3_path="s3://edx-test/test/",
+            overwrite=True,
+            enclosed_by='NONE',
+            null_marker='NULL',
+        )
 
         mock_cursor.execute.assert_has_calls(
             [
@@ -363,23 +335,20 @@ def test_export_snowflake_table_to_s3_no_escape(mock_sf_connection):  # noqa: F8
 
 def test_export_snowflake_table_to_s3_no_enclosure(mock_sf_connection):  # noqa: F811
     mock_cursor = mock_sf_connection.cursor()
-    with mock.patch('edx_prefectutils.s3.delete_s3_directory.run'):
-        with Flow("test") as f:
-            snowflake.export_snowflake_table_to_s3(
-                sf_credentials={},
-                sf_database="test_database",
-                sf_schema="test_schema",
-                sf_table="test_table",
-                sf_role="test_role",
-                sf_warehouse="test_warehouse",
-                sf_storage_integration="test_storage_integration",
-                s3_path="s3://edx-test/test/",
-                overwrite=True,
-                escape_unenclosed_field='\\\\',
-                null_marker='NULL',
-            )
-        state = f.run()
-        assert state.is_successful()
+    with mock.patch('edx_argoutils.s3.delete_s3_directory'):
+        snowflake.export_snowflake_table_to_s3(
+            sf_credentials={},
+            sf_database="test_database",
+            sf_schema="test_schema",
+            sf_table="test_table",
+            sf_role="test_role",
+            sf_warehouse="test_warehouse",
+            sf_storage_integration="test_storage_integration",
+            s3_path="s3://edx-test/test/",
+            overwrite=True,
+            escape_unenclosed_field='\\\\',
+            null_marker='NULL',
+        )
 
         mock_cursor.execute.assert_has_calls(
             [
@@ -390,23 +359,20 @@ def test_export_snowflake_table_to_s3_no_enclosure(mock_sf_connection):  # noqa:
 
 def test_export_snowflake_table_to_s3_no_null_if(mock_sf_connection):  # noqa: F811
     mock_cursor = mock_sf_connection.cursor()
-    with mock.patch('edx_prefectutils.s3.delete_s3_directory.run'):
-        with Flow("test") as f:
-            snowflake.export_snowflake_table_to_s3(
-                sf_credentials={},
-                sf_database="test_database",
-                sf_schema="test_schema",
-                sf_table="test_table",
-                sf_role="test_role",
-                sf_warehouse="test_warehouse",
-                sf_storage_integration="test_storage_integration",
-                s3_path="s3://edx-test/test/",
-                overwrite=True,
-                enclosed_by='NONE',
-                escape_unenclosed_field='\\\\',
-            )
-        state = f.run()
-        assert state.is_successful()
+    with mock.patch('edx_argoutils.s3.delete_s3_directory'):
+        snowflake.export_snowflake_table_to_s3(
+            sf_credentials={},
+            sf_database="test_database",
+            sf_schema="test_schema",
+            sf_table="test_table",
+            sf_role="test_role",
+            sf_warehouse="test_warehouse",
+            sf_storage_integration="test_storage_integration",
+            s3_path="s3://edx-test/test/",
+            overwrite=True,
+            enclosed_by='NONE',
+            escape_unenclosed_field='\\\\',
+        )
 
         mock_cursor.execute.assert_has_calls(
             [
@@ -422,37 +388,11 @@ def test_export_snowflake_table_to_s3_with_manifest(mock_sf_connection):  # noqa
     mock_fetchall.return_value = [[file] for file in s3_files]
     mock_cursor.fetchall = mock_fetchall
 
-    with mock.patch('prefect.tasks.aws.s3.S3Upload.run') as mock_s3_upload:
-        with Flow("test") as f:
-            snowflake.export_snowflake_table_to_s3(
-                sf_credentials={},
-                sf_database="test_database",
-                sf_schema="test_schema",
-                sf_table="test_table",
-                sf_role="test_role",
-                sf_warehouse="test_warehouse",
-                sf_storage_integration="test_storage_integration",
-                s3_path="s3://edx-test/test/",
-                overwrite=False,
-                generate_manifest=True,
-            )
-        state = f.run()
-        assert state.is_successful()
+    with mock.patch('boto3.client') as mock_boto_client:
+        mock_s3_client = mock_boto_client.return_value
+        mock_put_object = mock.Mock()
+        mock_s3_client.put_object = mock_put_object
 
-        expected_manifest_content = {
-            "entries": [
-                {"url": "s3://edx-test/test/test_database-test_schema-test_table/" + s3_file, "mandatory": True} for s3_file in s3_files # noqa
-            ]
-        }
-        mock_s3_upload.assert_called_once_with(
-            json.dumps(expected_manifest_content), key="test/test_database-test_schema-test_table/manifest.json"
-        )
-
-
-def test_export_snowflake_table_to_s3_no_overwrite(mock_sf_connection):  # noqa: F811
-    mock_cursor = mock_sf_connection.cursor()
-
-    with Flow("test") as f:
         snowflake.export_snowflake_table_to_s3(
             sf_credentials={},
             sf_database="test_database",
@@ -463,12 +403,39 @@ def test_export_snowflake_table_to_s3_no_overwrite(mock_sf_connection):  # noqa:
             sf_storage_integration="test_storage_integration",
             s3_path="s3://edx-test/test/",
             overwrite=False,
-            enclosed_by='"',
-            escape_unenclosed_field='\\\\',
-            null_marker='NULL',
+            generate_manifest=True,
         )
-    state = f.run()
-    assert state.is_successful()
+
+        expected_manifest_content = {
+            "entries": [
+                {"url": "s3://edx-test/test/test_database-test_schema-test_table/" + s3_file, "mandatory": True}
+                for s3_file in s3_files
+            ]
+        }
+        mock_put_object.assert_called_once_with(
+            Bucket="edx-test",
+            Key="test/test_database-test_schema-test_table/manifest.json",
+            Body=json.dumps(expected_manifest_content),
+        )
+
+
+def test_export_snowflake_table_to_s3_no_overwrite(mock_sf_connection):  # noqa: F811
+    mock_cursor = mock_sf_connection.cursor()
+
+    snowflake.export_snowflake_table_to_s3(
+        sf_credentials={},
+        sf_database="test_database",
+        sf_schema="test_schema",
+        sf_table="test_table",
+        sf_role="test_role",
+        sf_warehouse="test_warehouse",
+        sf_storage_integration="test_storage_integration",
+        s3_path="s3://edx-test/test/",
+        overwrite=False,
+        enclosed_by='"',
+        escape_unenclosed_field='\\\\',
+        null_marker='NULL',
+    )
 
     mock_cursor.execute.assert_has_calls(
         [
@@ -480,24 +447,21 @@ def test_export_snowflake_table_to_s3_no_overwrite(mock_sf_connection):  # noqa:
 def test_export_snowflake_table_to_s3_with_binary_format(mock_sf_connection):  # noqa: F811
     mock_cursor = mock_sf_connection.cursor()
 
-    with Flow("test") as f:
-        snowflake.export_snowflake_table_to_s3(
-            sf_credentials={},
-            sf_database="test_database",
-            sf_schema="test_schema",
-            sf_table="test_table",
-            sf_role="test_role",
-            sf_warehouse="test_warehouse",
-            sf_storage_integration="test_storage_integration",
-            s3_path="s3://edx-test/test/",
-            overwrite=False,
-            enclosed_by='"',
-            escape_unenclosed_field='\\\\',
-            null_marker='NULL',
-            binary_format='UTF8',
-        )
-    state = f.run()
-    assert state.is_successful()
+    snowflake.export_snowflake_table_to_s3(
+        sf_credentials={},
+        sf_database="test_database",
+        sf_schema="test_schema",
+        sf_table="test_table",
+        sf_role="test_role",
+        sf_warehouse="test_warehouse",
+        sf_storage_integration="test_storage_integration",
+        s3_path="s3://edx-test/test/",
+        overwrite=False,
+        enclosed_by='"',
+        escape_unenclosed_field='\\\\',
+        null_marker='NULL',
+        binary_format='UTF8',
+    )
 
     mock_cursor.execute.assert_has_calls(
         [
@@ -511,8 +475,7 @@ def test_load_s3_data_to_snowflake_data_disable_check(mock_sf_connection):
     mock_fetchone = mock.Mock()
     mock_cursor.fetchone = mock_fetchone
 
-    task = snowflake.load_s3_data_to_snowflake
-    task.run(
+    snowflake.load_s3_data_to_snowflake(
         date="2020-01-01",
         date_property='date',
         sf_credentials={},
@@ -532,7 +495,7 @@ def test_load_s3_data_to_snowflake_data_disable_check(mock_sf_connection):
 
     assert mock_call not in mock_cursor.execute.mock_calls
 
-    task.run(
+    snowflake.load_s3_data_to_snowflake(
         date="2020-01-01",
         date_property='date',
         sf_credentials={},

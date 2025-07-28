@@ -1,0 +1,128 @@
+"""
+S3 related common methods
+"""
+
+import boto3
+import logging
+
+logger = logging.getLogger("s3")
+
+
+def get_s3_client(credentials: dict = None):
+    s3_client = None
+    if credentials:
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=credentials.get('AccessKeyId'),
+            aws_secret_access_key=credentials.get('SecretAccessKey'),
+            aws_session_token=credentials.get('SessionToken')
+        )
+    else:
+        s3_client = boto3.client('s3')
+
+    return s3_client
+
+
+def delete_s3_directory(bucket: str = None, prefix: str = None, credentials: dict = None):
+    """
+    Deletes all objects under the given prefix from the specified S3 bucket.
+    Handles batching (900 keys max per call) and filters out empty/invalid keys.
+
+    Args:
+        bucket (str): The S3 bucket to delete the objects from.
+        prefix (str): The S3 prefix to delete the objects from.
+        credentials (dict): The AWS credentials to use.
+    """
+    s3_client = get_s3_client(credentials)
+    s3_keys = list_object_keys_from_s3(bucket, prefix, credentials)
+
+    s3_keys = [key for key in s3_keys if key and isinstance(key, str)]
+    logger.info("Deleting S3 keys: {}".format(s3_keys))
+
+    if s3_keys:
+        for i in range(0, len(s3_keys), 900):
+            batch = s3_keys[i:i + 900]
+            logger.info("Deleting {} S3 keys from bucket {} (batch {} to {})".format(
+                len(batch), bucket, i + 1, i + len(batch)
+            ))
+            s3_client.delete_objects(
+                Bucket=bucket,
+                Delete={
+                    'Objects': [{'Key': key} for key in batch]
+                }
+            )
+
+
+def delete_object_from_s3(key: str = None, bucket: str = None, credentials: dict = None, ):
+    """
+    Delete an object from S3.
+
+    key (str): Name of the object within the S3 bucket (/foo/bar/baz.json)
+    bucket (str): Name of the S3 bucket to delete from.
+    credentials (dict): AWS credentials, if None boto will fall back the usual methods of resolution.
+    """
+    s3_client = get_s3_client(credentials)
+    s3_client.delete_object(Bucket=bucket, Key=key)
+
+
+def list_object_keys_from_s3(bucket: str = None, prefix: str = '', credentials: dict = None, ):
+    """
+    List objects key names from an S3 bucket that match the given prefix.
+
+    prefix (str): Prefix path to search (ex: /foo/bar will match /foo/bar/baz and /foo/bar/baz/bing ...)
+    bucket (str): Name of the S3 bucket to search from.
+    credentials (dict): AWS credentials, if None boto will fall back the usual methods of resolution.
+    """
+    s3_client = get_s3_client(credentials)
+
+    all_object_keys = []
+
+    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+
+    if 'Contents' in response:
+        all_object_keys.extend([o['Key'] for o in response['Contents']])
+
+    while response.get('IsTruncated'):  # Check if there are more objects to fetch
+        # Use the NextContinuationToken to get the next batch of results
+        response = s3_client.list_objects_v2(
+            Bucket=bucket,
+            Prefix=prefix,
+            ContinuationToken=response['NextContinuationToken']
+        )
+
+        # Add the new batch of results to the list
+        if 'Contents' in response:
+            all_object_keys.extend([o['Key'] for o in response['Contents']])
+
+    # Log the total number of found objects
+    logger.info(f"Total objects found: {len(all_object_keys)}")
+    logger.info(f"Found objects: {all_object_keys}")
+    # edx_legacy/segment-config/dev/load_segment_config_to_snowflake/2024-11-08/2024-11-08.json
+
+    return all_object_keys
+
+
+def get_s3_path_for_date(filename):
+    # The path and file name inside our given bucket and S3 prefix to write the file to
+    return '{filename}/{filename}.json'.format(filename=filename)
+
+
+def write_report_to_s3(download_results: tuple, s3_bucket: str, s3_path: str, credentials: dict = None):
+    filename, report_str = download_results
+    file_path = get_s3_path_for_date(filename)
+    s3_key = s3_path + file_path
+    logger.info("Writing report to S3 for {} to {}".format(filename, s3_key))
+
+    s3_client = get_s3_client(credentials)
+
+    s3_client.put_object(
+        Bucket=s3_bucket,
+        Key=s3_key,
+        Body=report_str,
+        ContentType='application/json'
+    )
+    return file_path
+
+
+def get_s3_url(s3_bucket, s3_path):
+    return 's3://{bucket}/{path}'.format(bucket=s3_bucket, path=s3_path)

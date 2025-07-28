@@ -2,13 +2,19 @@
 
 import datetime
 import itertools
+import logging
 import re
 from collections import OrderedDict
 
 import ciso8601
 import pytz
 import six
-from prefect.utilities.logging import get_logger
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger("Record Class Logger.")
 
 DEFAULT_NULL_VALUE = b'\\N'
 
@@ -443,8 +449,9 @@ class HiveTsvEncoder(object):
         if encoded_string == self.null_value:
             return None
         else:
-            return encoded_string.decode('utf8')
-
+            if isinstance(encoded_string, bytes):  # Only decode if it's bytes
+                return encoded_string.decode('utf8')
+            return encoded_string  # Already a string, return as-is
 
 class Field(object):
     """
@@ -714,6 +721,20 @@ class DateTimeField(Field):  # pylint: disable=abstract-method
         # However, we assume the datetime does not include TZ info, and that it's UTC.
         return datetime.datetime(*[int(x) for x in re.split(r'\D+', string_value) if x], tzinfo=self.utc_tz)
 
+    def deserialize_from_string(self, string_value):
+        """Returns a datetime instance parsed from the numbers in the given string_value."""
+        if string_value is None:
+            return None
+        # Note: we need to be flexible here, because the datetime format differs between input sources
+        # (e.g.  tracking logs, REST API)
+        # However, we assume the datetime does not include TZ info, and that it's UTC.
+        try:
+            values = [int(x) for x in re.split(r'\D+', string_value) if x]
+            if not values:  # If the list is empty, return None instead of failing
+                return None
+            return datetime.datetime(*values, tzinfo=self.utc_tz)
+        except (ValueError, TypeError):
+            return None  # Return None for invalid inputs
 
 class FloatField(Field):  # pylint: disable=abstract-method
     """Represents a field that contains a floating point number."""
@@ -781,8 +802,6 @@ class RecordMapper(object):
         Errors are logged, but are not fatal.  In such cases, the value is simply not set.
         (It's only fatal, then, if the value was required.)
         """
-
-        logger = get_logger()
 
         def backslash_encode_value(value):
             """Implement simple backslash encoding, similar to .encode('string_escape')."""
